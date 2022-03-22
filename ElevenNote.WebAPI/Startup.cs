@@ -13,7 +13,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Text;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using ElevenNote.Services.Token;
 
 namespace ElevenNote.WebAPI
 {
@@ -35,6 +39,21 @@ namespace ElevenNote.WebAPI
 
             // Add User Service/Interface for Dependency Injection here
             services.AddScoped<IUserService, UserService>();
+            services.AddScoped<ITokenService, TokenService>();
+
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+            {
+                options.RequireHttpsMetadata = false;
+                options.SaveToken = true;
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidIssuer = Configuration["Jwt:Issuer"],
+                    ValidAudience = Configuration["Jwt:Audience"],
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["Jwt:Key"]))
+                };
+            });
 
             services.AddControllers();
             services.AddSwaggerGen(c =>
@@ -56,6 +75,9 @@ namespace ElevenNote.WebAPI
             app.UseHttpsRedirection();
 
             app.UseRouting();
+
+            // Adds AuthenticationMiddleware to the IApplicationBuilder, enabling authentication capabilities.
+            app.UseAuthentication();
 
             app.UseAuthorization();
 
